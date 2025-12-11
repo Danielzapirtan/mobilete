@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebXR Room Layout Scanner</title>
+    <title>Scanner Dispunere Cameră WebXR</title>
     <style>
         * {
             margin: 0;
@@ -220,65 +220,65 @@
     </style>
 </head>
 <body>
-    <!-- Instructions Modal -->
+    <!-- Instrucțiuni -->
     <div id="instructions">
-        <h2>WebXR Room Scanner</h2>
-        <p>Scan your room and export the layout as JSON.</p>
-        <p><strong>Requirements:</strong></p>
+        <h2>Scanner Cameră WebXR</h2>
+        <p>Scanează-ți camera și exportă planul ca JSON.</p>
+        <p><strong>Cerințe:</strong></p>
         <ol>
-            <li>Modern smartphone with AR capabilities</li>
-            <li>Chrome or Safari browser</li>
-            <li>Good lighting conditions</li>
-            <li>Move slowly around the room</li>
+            <li>Smartphone modern cu capabilități AR</li>
+            <li>Browser Chrome sau Safari</li>
+            <li>Condiții de iluminat bune</li>
+            <li>Deplasează-te lent în jurul camerei</li>
         </ol>
-        <p><em>The app will detect walls, floor, and ceiling, then remove furniture automatically.</em></p>
-        <button id="start-btn">Start Scanning</button>
+        <p><em>Aplicația va detecta pereții, podeaua și tavanul, apoi va elimina automat mobila.</em></p>
+        <button id="start-btn">Începe Scanarea</button>
     </div>
 
-    <!-- Main UI -->
+    <!-- Interfața Principală -->
     <div id="ui-container">
         <div class="control-group">
-            <label>Scan Mode:</label>
+            <label>Mod Scanare:</label>
             <select id="scan-mode">
-                <option value="auto">Auto-detect Surfaces</option>
-                <option value="manual">Manual Point Selection</option>
+                <option value="auto">Detectare Automată Suprafețe</option>
+                <option value="manual">Selecție Manuală Puncte</option>
             </select>
         </div>
         <div class="control-group">
-            <button id="capture-btn">Capture Surface Point</button>
+            <button id="capture-btn">Capturează Punct Suprafață</button>
         </div>
         <div class="control-group">
-            <button id="process-btn">Process Room Layout</button>
+            <button id="process-btn">Procesează Planul Camerei</button>
         </div>
         <div class="control-group">
-            <button id="reset-btn">Reset Scan</button>
+            <button id="reset-btn">Resetează Scanarea</button>
         </div>
     </div>
 
-    <!-- Status Display -->
-    <div id="status">Ready to scan...</div>
+    <!-- Afișaj Stare -->
+    <div id="status">Gata de scanare...</div>
 
-    <!-- Results Panel -->
+    <!-- Panou Rezultate -->
     <div id="results">
-        <h3>Room Layout JSON</h3>
+        <h3>Plan Cameră JSON</h3>
         <div id="json-output"></div>
-        <button id="export-btn">Export JSON File</button>
-        <button id="close-results">Close</button>
+        <button id="export-btn">Exportă Fișier JSON</button>
+        <button id="close-results">Închide</button>
     </div>
 
-    <!-- Loading Indicator -->
+    <!-- Indicator Încărcare -->
     <div id="loading">
         <div class="spinner"></div>
-        <div id="loading-text">Processing...</div>
+        <div id="loading-text">Se procesează...</div>
     </div>
 
-    <!-- Canvas Container -->
+    <!-- Container Canvas -->
     <div id="canvas-container"></div>
 
-    <!-- XR Button -->
-    <button id="xr-button">Enter AR Mode</button>
+    <!-- Buton XR -->
+    <button id="xr-button">Intră în Mod AR</button>
 
-    <!-- Three.js and WebXR Libraries -->
+    <!-- Biblioteci Three.js și WebXR -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
@@ -303,38 +303,38 @@
             }
 
             async init() {
-                // Check for WebXR support
+                // Verifică suportul WebXR
                 if (!navigator.xr) {
-                    this.showError('WebXR not supported in this browser. Try Chrome on Android or Safari on iOS.');
+                    this.showError('WebXR nu este suportat în acest browser. Încearcă Chrome pe Android sau Safari pe iOS.');
                     return;
                 }
 
-                // Initialize Three.js
+                // Inițializează Three.js
                 this.setupThreeJS();
                 
-                // Setup event listeners
+                // Configurează ascultătorii de evenimente
                 this.setupEventListeners();
                 
-                // Check AR availability
+                // Verifică disponibilitatea AR
                 const supported = await navigator.xr.isSessionSupported('immersive-ar');
                 if (!supported) {
-                    this.showError('AR not supported on this device.');
+                    this.showError('AR nu este suportat pe acest dispozitiv.');
                     return;
                 }
 
                 document.getElementById('xr-button').style.display = 'block';
-                this.updateStatus('Ready to start AR scanning');
+                this.updateStatus('Gata să începem scanarea AR');
             }
 
             setupThreeJS() {
-                // Create scene
+                // Creează scena
                 this.scene = new THREE.Scene();
                 this.scene.background = new THREE.Color(0x000000);
                 
-                // Create camera
+                // Creează camera
                 this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
                 
-                // Create renderer
+                // Creează renderer
                 this.renderer = new THREE.WebGLRenderer({ 
                     antialias: true,
                     alpha: true,
@@ -344,11 +344,11 @@
                 this.renderer.setPixelRatio(window.devicePixelRatio);
                 this.renderer.xr.enabled = true;
                 
-                // Add canvas to container
+                // Adaugă canvas în container
                 const container = document.getElementById('canvas-container');
                 container.appendChild(this.renderer.domElement);
                 
-                // Add lighting
+                // Adaugă iluminare
                 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
                 this.scene.add(ambientLight);
                 
@@ -356,14 +356,14 @@
                 directionalLight.position.set(0, 1, 0);
                 this.scene.add(directionalLight);
                 
-                // Add grid helper
+                // Adaugă grilă helper
                 const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
                 gridHelper.position.y = -1;
                 this.scene.add(gridHelper);
             }
 
             setupEventListeners() {
-                // UI Controls
+                // Controale UI
                 document.getElementById('start-btn').addEventListener('click', () => {
                     document.getElementById('instructions').classList.add('hidden');
                     this.startXR();
@@ -382,10 +382,10 @@
                     this.scanMode = e.target.value;
                 });
                 
-                // Handle window resize
+                // Gestionează redimensionarea ferestrei
                 window.addEventListener('resize', () => this.onWindowResize());
                 
-                // Handle tap for point capture in AR
+                // Gestionează tap pentru capturare puncte în AR
                 this.renderer.domElement.addEventListener('click', (e) => {
                     if (this.xrSession && this.scanMode === 'manual') {
                         this.handleTap(e);
@@ -395,49 +395,49 @@
 
             async startXR() {
                 try {
-                    // Request AR session
+                    // Solicită sesiunea AR
                     this.xrSession = await navigator.xr.requestSession('immersive-ar', {
                         requiredFeatures: ['hit-test', 'local'],
                         optionalFeatures: ['dom-overlay'],
                         domOverlay: { root: document.body }
                     });
                     
-                    // Setup XR session
+                    // Configurează sesiunea XR
                     this.renderer.xr.setSession(this.xrSession);
                     
-                    // Create reference space
+                    // Creează spațiu de referință
                     this.xrReferenceSpace = await this.xrSession.requestReferenceSpace('local');
                     
-                    // Initialize hit test source
+                    // Inițializează sursa de hit test
                     const viewerSpace = await this.xrSession.requestReferenceSpace('viewer');
                     this.hitTestSource = await this.xrSession.requestHitTestSource({ 
                         space: viewerSpace 
                     });
                     
-                    // Setup UI for scanning
+                    // Configurează UI pentru scanare
                     document.getElementById('ui-container').style.display = 'block';
                     document.getElementById('xr-button').style.display = 'none';
                     document.getElementById('status').style.display = 'block';
                     
                     this.isScanning = true;
-                    this.updateStatus('Scanning started. Move your phone around the room.');
+                    this.updateStatus('Scanarea a început. Mișcă telefonul în jurul camerei.');
                     
-                    // Start animation loop
+                    // Începe bucla de animație
                     this.renderer.setAnimationLoop((time, frame) => this.renderScene(time, frame));
                     
-                    // Handle session end
+                    // Gestionează sfârșitul sesiunii
                     this.xrSession.addEventListener('end', () => this.onSessionEnd());
                     
                 } catch (error) {
-                    console.error('Failed to start AR session:', error);
-                    this.showError('Failed to start AR: ' + error.message);
+                    console.error('Nu s-a putut porni sesiunea AR:', error);
+                    this.showError('Nu s-a putut porni AR: ' + error.message);
                 }
             }
 
             async renderScene(time, frame) {
                 if (!this.xrSession) return;
                 
-                // Get XR frame
+                // Obține cadrul XR
                 const session = this.renderer.xr.getSession();
                 const referenceSpace = this.renderer.xr.getReferenceSpace();
                 
@@ -445,14 +445,14 @@
                     const hitTestResults = frame.getHitTestResults(this.hitTestSource);
                     
                     if (hitTestResults.length > 0 && this.scanMode === 'auto') {
-                        // Auto-detect surfaces
+                        // Detectare automată suprafețe
                         const hit = hitTestResults[0];
                         const pose = hit.getPose(referenceSpace);
                         
-                        // Classify surface type based on normal
+                        // Clasifică tipul suprafeței pe baza normalei
                         const normal = this.classifySurface(hit);
                         
-                        // Add to detected surfaces if it's a room surface
+                        // Adaugă la suprafețele detectate dacă este o suprafață a camerei
                         if (normal && !this.isDuplicateSurface(pose.transform.position, normal)) {
                             this.detectedSurfaces.push({
                                 position: pose.transform.position,
@@ -461,58 +461,58 @@
                                 timestamp: time
                             });
                             
-                            // Visualize detected surface
+                            // Vizualizează suprafața detectată
                             this.visualizeSurface(pose.transform.position, normal, this.getSurfaceType(normal));
                         }
                     }
                 }
                 
-                // Render scene
+                // Redă scena
                 this.renderer.render(this.scene, this.camera);
             }
 
             handleTap(event) {
                 if (!this.xrSession || !this.hitTestSource) return;
                 
-                // Get tap position in normalized device coordinates
+                // Obține poziția tap-ului în coordonate normalizate de dispozitiv
                 const rect = this.renderer.domElement.getBoundingClientRect();
                 const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
                 const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
                 
-                // TODO: Implement raycasting for manual point selection
-                // This would require more complex hit testing
-                this.updateStatus('Manual point selection is not fully implemented in this demo');
+                // TODO: Implementează raycasting pentru selecția manuală de puncte
+                // Acest lucru ar necesita un hit test mai complex
+                this.updateStatus('Selecția manuală de puncte nu este complet implementată în acest demo');
             }
 
             capturePoint() {
                 if (!this.xrSession || !this.renderer.xr.getSession()) {
-                    this.updateStatus('Start AR session first');
+                    this.updateStatus('Pornește mai întâi sesiunea AR');
                     return;
                 }
                 
-                this.updateStatus('Surface capture triggered');
+                this.updateStatus('Capturare suprafață declanșată');
             }
 
             classifySurface(hit) {
-                // This is a simplified classification
-                // In a real app, you'd use more sophisticated algorithms
+                // Aceasta este o clasificare simplificată
+                // Într-o aplicație reală, ai folosi algoritmi mai sofisticați
                 const pose = hit.getPose(this.xrReferenceSpace);
                 if (!pose) return null;
                 
-                // Extract normal from hit result (simplified)
-                // Note: Actual hit test results don't provide normals in basic WebXR
-                // This is a placeholder for demonstration
+                // Extrage normala din rezultatul hit (simplificat)
+                // Notă: Rezultatele reale de hit test nu furnizează normale în WebXR de bază
+                // Aceasta este un substituent pentru demonstrație
                 const position = pose.transform.position;
                 
-                // Simulate classification based on position
+                // Simulează clasificarea pe baza poziției
                 const threshold = 0.2;
                 
                 if (Math.abs(position.y) < threshold) {
-                    return { x: 0, y: 1, z: 0 }; // Floor
+                    return { x: 0, y: 1, z: 0 }; // Podea
                 } else if (Math.abs(position.y - 2) < threshold) {
-                    return { x: 0, y: -1, z: 0 }; // Ceiling
+                    return { x: 0, y: -1, z: 0 }; // Tavan
                 } else {
-                    // Wall - classify based on dominant axis
+                    // Perete - clasifică pe baza axei dominante
                     const absX = Math.abs(position.x);
                     const absZ = Math.abs(position.z);
                     
@@ -550,12 +550,12 @@
 
             visualizeSurface(position, normal, type) {
                 const colors = {
-                    floor: 0x4CAF50,    // Green
-                    wall: 0x2196F3,     // Blue
-                    ceiling: 0xFF9800   // Orange
+                    floor: 0x4CAF50,    // Verde
+                    wall: 0x2196F3,     // Albastru
+                    ceiling: 0xFF9800   // Portocaliu
                 };
                 
-                // Create a small plane to visualize surface
+                // Creează un plan mic pentru a vizualiza suprafața
                 const geometry = new THREE.PlaneGeometry(0.1, 0.1);
                 const material = new THREE.MeshBasicMaterial({ 
                     color: colors[type] || 0xffffff,
@@ -567,7 +567,7 @@
                 const plane = new THREE.Mesh(geometry, material);
                 plane.position.set(position.x, position.y, position.z);
                 
-                // Orient plane based on normal
+                // Orientă planul pe baza normalei
                 plane.lookAt(
                     position.x + normal.x,
                     position.y + normal.y,
@@ -578,45 +578,45 @@
             }
 
             async processRoomLayout() {
-                this.showLoading('Processing room layout...');
+                this.showLoading('Se procesează planul camerei...');
                 
-                // Simulate processing delay
+                // Simulează întârzierea procesării
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 
-                // Group surfaces into room boundaries
+                // Grupează suprafețele în limitele camerei
                 const boundaries = this.groupSurfacesIntoBoundaries();
                 
-                // Calculate room dimensions
+                // Calculează dimensiunile camerei
                 const dimensions = this.calculateRoomDimensions(boundaries);
                 
-                // Generate JSON output
+                // Generează ieșirea JSON
                 this.roomLayout = this.generateRoomJSON(boundaries, dimensions);
                 
-                // Display results
+                // Afișează rezultatele
                 this.displayResults();
                 
                 this.hideLoading();
-                this.updateStatus('Room layout processed successfully');
+                this.updateStatus('Planul camerei a fost procesat cu succes');
             }
 
             groupSurfacesIntoBoundaries() {
-                // Simple grouping algorithm
+                // Algoritm simplu de grupare
                 const boundaries = {
                     walls: [],
                     floor: null,
                     ceiling: null
                 };
                 
-                // Group by type
+                // Grupează după tip
                 const walls = this.detectedSurfaces.filter(s => s.type === 'wall');
                 const floors = this.detectedSurfaces.filter(s => s.type === 'floor');
                 const ceilings = this.detectedSurfaces.filter(s => s.type === 'ceiling');
                 
-                // For demo purposes, create simplified boundaries
+                // Pentru scopuri demo, creează limite simplificate
                 if (floors.length > 0) {
                     boundaries.floor = {
                         vertices: this.calculateBoundaryVertices(floors),
-                        material: 'concrete',
+                        material: 'beton',
                         thickness: 0.2
                     };
                 }
@@ -624,19 +624,19 @@
                 if (ceilings.length > 0) {
                     boundaries.ceiling = {
                         vertices: this.calculateBoundaryVertices(ceilings),
-                        material: 'drywall',
+                        material: 'gips-carton',
                         thickness: 0.15
                     };
                 }
                 
-                // Group walls into distinct planes
+                // Grupează pereții în planuri distincte
                 const wallGroups = this.groupByOrientation(walls);
                 wallGroups.forEach((group, index) => {
                     boundaries.walls.push({
                         id: `wall_${index + 1}`,
                         vertices: this.calculateBoundaryVertices(group.surfaces),
                         orientation: group.orientation,
-                        material: 'drywall',
+                        material: 'gips-carton',
                         thickness: 0.1,
                         openings: []
                     });
@@ -648,7 +648,7 @@
             calculateBoundaryVertices(surfaces) {
                 if (surfaces.length === 0) return [];
                 
-                // Find min and max positions
+                // Găsește pozițiile min și max
                 const positions = surfaces.map(s => s.position);
                 const minX = Math.min(...positions.map(p => p.x));
                 const maxX = Math.max(...positions.map(p => p.x));
@@ -657,7 +657,7 @@
                 const minZ = Math.min(...positions.map(p => p.z));
                 const maxZ = Math.max(...positions.map(p => p.z));
                 
-                // Create rectangular boundary (simplified)
+                // Creează limită rectangulară (simplificată)
                 return [
                     [minX, minY, minZ],
                     [maxX, minY, minZ],
@@ -706,7 +706,7 @@
                 
                 const width = Math.abs(maxX - minX);
                 const depth = Math.abs(maxZ - minZ);
-                const height = 2.5; // Default height
+                const height = 2.5; // Înălțime implicită
                 
                 return {
                     width: parseFloat(width.toFixed(2)),
@@ -723,7 +723,7 @@
                         version: "1.0",
                         type: "empty_room_layout",
                         timestamp: new Date().toISOString(),
-                        scannedWith: "WebXR Room Scanner",
+                        scannedWith: "Scanner Cameră WebXR",
                         unit: "meters"
                     },
                     boundaries: boundaries,
@@ -751,7 +751,7 @@
 
             exportJSON() {
                 if (!this.roomLayout) {
-                    this.updateStatus('No room layout to export');
+                    this.updateStatus('Nu există plan de cameră de exportat');
                     return;
                 }
                 
@@ -761,13 +761,13 @@
                 
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `room_layout_${new Date().toISOString().split('T')[0]}.json`;
+                a.download = `plan_camera_${new Date().toISOString().split('T')[0]}.json`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
                 
-                this.updateStatus('Room layout exported as JSON');
+                this.updateStatus('Planul camerei a fost exportat ca JSON');
             }
 
             resetScan() {
@@ -775,12 +775,12 @@
                 this.detectedSurfaces = [];
                 this.roomLayout = null;
                 
-                // Remove all visualized surfaces
+                // Îndepărtează toate suprafețele vizualizate
                 this.scene.children = this.scene.children.filter(child => 
                     child.type !== 'Mesh' || child.geometry.type !== 'PlaneGeometry'
                 );
                 
-                this.updateStatus('Scan reset. Ready for new scan.');
+                this.updateStatus('Scanare resetată. Gata pentru o scanare nouă.');
             }
 
             onSessionEnd() {
@@ -792,7 +792,7 @@
                 document.getElementById('xr-button').style.display = 'block';
                 document.getElementById('status').style.display = 'none';
                 
-                this.updateStatus('AR session ended');
+                this.updateStatus('Sesiunea AR s-a încheiat');
             }
 
             onWindowResize() {
@@ -804,11 +804,11 @@
             updateStatus(message) {
                 const statusEl = document.getElementById('status');
                 statusEl.textContent = message;
-                console.log('Status:', message);
+                console.log('Stare:', message);
             }
 
             showError(message) {
-                alert('Error: ' + message);
+                alert('Eroare: ' + message);
                 console.error(message);
             }
 
@@ -822,19 +822,19 @@
             }
         }
 
-        // Initialize the scanner when page loads
+        // Inițializează scannerul când se încarcă pagina
         window.addEventListener('load', () => {
             window.scanner = new RoomScanner();
             
-            // Check for mobile device
+            // Verifică dacă este dispozitiv mobil
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             if (!isMobile) {
                 document.getElementById('instructions').innerHTML += 
-                    '<p style="color: #ff9800; margin-top: 10px;">Note: This app works best on mobile devices with AR capabilities.</p>';
+                    '<p style="color: #ff9800; margin-top: 10px;">Notă: Această aplicație funcționează cel mai bine pe dispozitive mobile cu capabilități AR.</p>';
             }
         });
 
-        // Handle page visibility change
+        // Gestionează schimbarea vizibilității paginii
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && window.scanner && window.scanner.xrSession) {
                 window.scanner.xrSession.end();
