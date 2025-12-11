@@ -3,21 +3,21 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
-<title>Room Scanner — WebXR Empty-Room JSON Export</title>
+<title>Depth Room Scanner — WebXR (Depth-powered)</title>
 <style>
-  :root{--bg:#0f1720;--panel:#0b1220;--accent:#4caf50;--muted:#99a0b3}
-  html,body {height:100%;margin:0;background:var(--bg);color:#fff;font-family:Inter,system-ui,Roboto,Segoe UI,Arial;}
-  #app {height:100%;display:flex;flex-direction:column}
-  #viewer {flex:1;position:relative;overflow:hidden}
-  canvas {width:100%;height:100%;display:block}
-  .ui {position: absolute; left:12px; top:12px; z-index:60; background:rgba(6,10,14,0.65); padding:10px; border-radius:10px; min-width:230px}
-  .ui h3{margin:0 0 8px 0;font-size:14px;color:var(--accent)}
-  .ui button, .ui select {width:100%;padding:8px;margin-top:8px;border-radius:8px;border:0;background:#0f1728;color:#fff}
-  #status {position:absolute;left:50%;transform:translateX(-50%);bottom:16px;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:20px;font-size:13px;z-index:60}
-  #resultsPanel {position:absolute;right:12px;top:12px;z-index:60;width:320px;max-height:70vh;overflow:auto;background:rgba(2,6,10,0.85);padding:12px;border-radius:10px;display:none}
+  :root{--bg:#071021;--card:#081226;--accent:#4caf50;--muted:#9fb0c8}
+  html,body{height:100%;margin:0;background:var(--bg);color:#e6f0ff;font-family:Inter,system-ui,Roboto,Segoe UI,Arial}
+  #app{height:100%;display:flex;flex-direction:column}
+  #viewer{flex:1;position:relative;overflow:hidden}
+  canvas{width:100%;height:100%;display:block}
+  .panel{position:absolute;left:12px;top:12px;z-index:60;background:linear-gradient(180deg, rgba(6,10,14,0.9), rgba(3,6,10,0.75));padding:12px;border-radius:10px;min-width:260px}
+  .panel h3{margin:0 0 6px 0;color:var(--accent);font-size:15px}
+  .panel button,.panel select{width:100%;padding:8px;margin-top:6px;border-radius:8px;border:0;background:#0b1622;color:#fff}
+  #status{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:20px;font-size:13px;z-index:60}
+  #results{position:absolute;right:12px;top:12px;z-index:60;width:360px;max-height:72vh;overflow:auto;background:rgba(2,6,10,0.9);padding:12px;border-radius:10px;display:none}
   pre{white-space:pre-wrap;word-break:break-word;font-size:12px;background:#07101a;padding:10px;border-radius:6px;max-height:48vh;overflow:auto}
-  .small{font-size:12px;color:var(--muted)}
-  #instructions {position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:70;background:rgba(0,0,0,0.85);padding:18px;border-radius:12px;max-width:420px}
+  .muted{font-size:12px;color:var(--muted)}
+  #instructions{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:80;background:rgba(2,6,10,0.95);padding:18px;border-radius:12px;max-width:480px}
   #instructions h2{margin:0 0 8px 0;color:var(--accent)}
   a.link{color:#8cc2ff;text-decoration:underline}
 </style>
@@ -26,89 +26,93 @@
 <div id="app">
   <div id="viewer"></div>
 
-  <div class="ui" id="controls" style="display:none">
-    <h3>Room Scanner (WebXR)</h3>
-    <div class="small">Mode</div>
+  <div class="panel" id="controls" style="display:none">
+    <h3>Depth Room Scanner</h3>
+    <div class="muted">Mode</div>
     <select id="mode">
-      <option value="auto">Auto sample (move device)</option>
-      <option value="manual">Manual taps (tap to sample)</option>
+      <option value="auto">Auto depth sampling</option>
+      <option value="manual">Manual taps (hit-test fallback)</option>
     </select>
-    <button id="startAR">Start AR Session</button>
-    <button id="stopAR" style="display:none">End AR</button>
+    <button id="startBtn">Start AR (request depth)</button>
+    <button id="stopBtn" style="display:none">Stop AR</button>
     <button id="processBtn">Process & Generate JSON</button>
-    <button id="resetBtn">Reset Scan</button>
+    <button id="resetBtn">Reset</button>
+    <div class="muted" style="margin-top:8px;font-size:12px">Samples: <span id="sampleCount">0</span></div>
   </div>
 
-  <div id="status" style="display:none">Initializing...</div>
+  <div id="status" style="display:none">Ready</div>
 
-  <div id="resultsPanel" aria-live="polite">
+  <div id="results" aria-live="polite">
     <div style="display:flex;align-items:center;justify-content:space-between">
       <strong style="color:var(--accent)">Empty Room JSON</strong>
-      <div class="small">Surfaces: <span id="countSurfaces">0</span></div>
+      <div class="muted">Points: <span id="pointsCount">0</span></div>
     </div>
     <hr style="border:none;border-top:1px solid rgba(255,255,255,0.06);margin:8px 0" />
     <pre id="jsonOutput">No result yet.</pre>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button id="copyBtn">Copy JSON</button>
       <button id="downloadBtn">Download</button>
-      <button id="closeResults">Close</button>
+      <button id="closeRes">Close</button>
     </div>
-    <div class="small" style="margin-top:8px">Hints: move slowly, keep lighting good. This demo uses hit-test sampling + heuristics to ignore furniture by clustering low-height noisy points.</div>
+    <div class="muted" style="margin-top:8px">Tip: move slowly around the floor perimeter and sweep each wall. Avoid reflective surfaces.</div>
   </div>
 
   <div id="instructions">
-    <h2>Room Scanner — Demo</h2>
-    <p class="small">This page uses WebXR (hit-test) to sample points in the environment. It will attempt to classify floor / walls / ceiling and produce a simplified empty-room JSON. Works best in Chrome on Android with WebXR support or Safari on AR-enabled iOS.</p>
-    <ol class="small">
-      <li>Open on a phone with HTTPS or localhost.</li>
-      <li>Tap "Start AR Session" and grant camera permissions.</li>
-      <li>Move slowly to sweep the room (auto mode) or tap surfaces (manual).</li>
-      <li>When you've covered the room, press "Process & Generate JSON".</li>
-    </ol>
+    <h2>Depth-powered Room Scanner</h2>
+    <p class="muted">This demo tries to use the WebXR Depth Sensing API. For best results on your Galaxy S21 Ultra: use Chrome (stable or Canary), allow camera permissions, and sweep slowly. If depth isn't available the app will fallback to hit-test sampling.</p>
     <div style="display:flex;gap:8px;margin-top:10px">
-      <button id="dismiss">Got it — show controls</button>
+      <button id="okBtn">Let's scan — show controls</button>
       <a class="link" href="https://developer.mozilla.org/en-US/docs/Web/API/WebXR_Device_API" target="_blank" rel="noopener">WebXR docs</a>
     </div>
   </div>
 </div>
 
-<!-- Three.js from CDN -->
+<!-- Three.js -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 
 <script>
 /*
-  Room Scanner (single-file). Notes:
-  - Uses WebXR 'immersive-ar' + hit-test.
-  - Samples hit-test positions and classifies them heuristically.
-  - Attempts to ignore furniture by removing clusters that are: small, near floor but above floor plane, or isolated low-height clusters.
-  - Produces a simplified JSON describing boundaries, dimensions, and metadata.
-  - For production, replace heuristics with plane-detection/SLAM/depth.
+ Depth Room Scanner (single-file)
+
+ Approach:
+  - Try to request WebXR session with 'depth-sensing' optional feature.
+  - If available, each XRFrame we call getDepthInformation(view) to obtain XRDepthInformation.
+  - Convert depth pixels -> camera-space rays -> world coordinates to build a point cloud (subsampled).
+  - Use RANSAC to find dominant planes: floor (largest horizontal plane near lowest Y) and major vertical planes (walls).
+  - Remove clusters likely to be furniture (small clusters above floor plane).
+  - Fit polygons to inliers of wall planes by projecting to plane and computing convex hull (approx).
+  - Output structured JSON.
+  - If depth is not available, fallback to hit-test sampling (less accurate).
+
+ Note: WebXR Depth Sensing API varies; we feature-detect carefully and fall back gracefully.
 */
 
 (async function(){
-  // UI elements
+  // UI refs
   const viewer = document.getElementById('viewer');
-  const startARBtn = document.getElementById('startAR');
-  const stopARBtn = document.getElementById('stopAR');
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
   const processBtn = document.getElementById('processBtn');
   const resetBtn = document.getElementById('resetBtn');
   const controls = document.getElementById('controls');
   const statusEl = document.getElementById('status');
-  const resultsPanel = document.getElementById('resultsPanel');
+  const results = document.getElementById('results');
   const jsonOutput = document.getElementById('jsonOutput');
   const copyBtn = document.getElementById('copyBtn');
   const downloadBtn = document.getElementById('downloadBtn');
-  const closeResults = document.getElementById('closeResults');
-  const countSurfaces = document.getElementById('countSurfaces');
+  const closeRes = document.getElementById('closeRes');
+  const okBtn = document.getElementById('okBtn');
+  const sampleCountEl = document.getElementById('sampleCount');
+  const pointsCountEl = document.getElementById('pointsCount');
   const modeSelect = document.getElementById('mode');
 
   function showStatus(msg, show=true){
     statusEl.textContent = msg;
-    statusEl.style.display = show? 'block':'none';
-    console.log('[scanner]', msg);
+    statusEl.style.display = show ? 'block' : 'none';
+    console.log('[depth-scanner]', msg);
   }
 
-  // Three.js scene + renderer
+  // Three.js setup
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 100);
   const renderer = new THREE.WebGLRenderer({alpha:true, antialias:true, preserveDrawingBuffer:true});
@@ -119,338 +123,611 @@
 
   const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
   scene.add(light);
-
-  // small visualization group
   const vizGroup = new THREE.Group();
   scene.add(vizGroup);
 
-  // Data collected during scan
-  let samples = []; // {x,y,z, type?}
+  window.addEventListener('resize', ()=>{
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // Data
   let xrSession = null;
   let refSpace = null;
   let hitTestSource = null;
-  let viewerSpace = null;
-  let rafHandle = null;
+  let samples = []; // collected 3D points {x,y,z}
+  let renderedPoints = []; // three.js meshes for markers
+  let depthSupported = false;
+  let usingDepth = false;
 
-  function resize(){ camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
-  window.addEventListener('resize', resize);
-
-  // Simple sphere marker for visualization
-  function addMarker(pos, color=0x4caf50, size=0.03){
+  // utility
+  function addPointMarker(p,color=0x00ff88,size=0.02){
     const g = new THREE.SphereGeometry(size,8,8);
     const m = new THREE.MeshBasicMaterial({color});
-    const mesh = new THREE.Mesh(g,m);
-    mesh.position.set(pos.x,pos.y,pos.z);
-    vizGroup.add(mesh);
-    return mesh;
+    const s = new THREE.Mesh(g,m);
+    s.position.set(p.x,p.y,p.z);
+    vizGroup.add(s);
+    renderedPoints.push(s);
   }
+  function clearViz(){ while(vizGroup.children.length) vizGroup.remove(vizGroup.children[0]); renderedPoints=[]; }
 
-  // check WebXR support
+  // Small sampling control (to avoid flooding)
+  let lastDepthSampleTime = 0;
+
+  // Feature detection: check navigator.xr and depth-sensing capability (best-effort)
   const xrAvailable = !!navigator.xr;
   if (!xrAvailable){
-    document.getElementById('instructions').innerHTML += '<p style="color:#ffb86b">WebXR not available in this browser. Try Chrome on recent Android or Safari on iOS with AR support.</p>';
+    document.getElementById('instructions').innerHTML += '<p style="color:#ffb86b">WebXR not supported in this browser. Use Chrome on Android.</p>';
     showStatus('WebXR not available', true);
   }
 
-  // Simple clustering helpers
-  function euclid(a,b){ return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2 + (a.z-b.z)**2); }
+  // Basic RANSAC plane fitter (3D)
+  function ransacPlane(points, iterations=500, threshold=0.03, minInliersRatio=0.05){
+    // returns {normal:[nx,ny,nz], d, inliers: [indices]} or null
+    if (points.length < 20) return null;
+    let best = null;
+    for (let it=0; it<iterations; it++){
+      // pick 3 random non-collinear points
+      const ia = Math.floor(Math.random()*points.length);
+      let ib = Math.floor(Math.random()*points.length);
+      let ic = Math.floor(Math.random()*points.length);
+      if (ia===ib || ia===ic || ib===ic) continue;
+      const A = points[ia], B = points[ib], C = points[ic];
+      // compute normal = (B-A)x(C-A)
+      const ux = B.x - A.x, uy = B.y - A.y, uz = B.z - A.z;
+      const vx = C.x - A.x, vy = C.y - A.y, vz = C.z - A.z;
+      const nx = uy*vz - uz*vy;
+      const ny = uz*vx - ux*vz;
+      const nz = ux*vy - uy*vx;
+      const norm = Math.hypot(nx,ny,nz);
+      if (norm < 1e-6) continue;
+      const nnx = nx/norm, nny = ny/norm, nnz = nz/norm;
+      // plane equation: nnx*(x-A.x) + nny*(y-A.y) + nnz*(z-A.z) = 0
+      const d = -(nnx*A.x + nny*A.y + nnz*A.z);
+      const inliers = [];
+      for (let i=0;i<points.length;i++){
+        const p = points[i];
+        const dist = Math.abs(nnx*p.x + nny*p.y + nnz*p.z + d);
+        if (dist < threshold) inliers.push(i);
+      }
+      if (!best || inliers.length > best.inliers.length){
+        best = {normal:[nnx,nny,nnz], d, inliers};
+        // early break if large plane
+        if (inliers.length > points.length*0.6) break;
+      }
+    }
+    if (!best) return null;
+    if (best.inliers.length < Math.max(20, Math.floor(points.length*minInliersRatio))) return null;
+    return best;
+  }
 
-  // Heuristic furniture removal:
-  // 1) Estimate floor plane by majority of low-y samples
-  // 2) Remove points whose y is between floor_y + small range up to ~1.2m and belong to small isolated clusters (likely furniture)
-  function removeFurnitureHeuristic(points){
+  // Project points to plane coordinate system and compute 2D convex hull (Graham scan)
+  function convexHull2D(points2D){
+    // points2D: array of {x,y}
+    if (points2D.length < 3) return points2D;
+    // sort by x, then y
+    points2D.sort((a,b)=> a.x===b.x ? a.y-b.y : a.x-b.x);
+    const cross = (o,a,b) => (a.x - o.x)*(b.y - o.y) - (a.y - o.y)*(b.x - o.x);
+    const lower = [];
+    for (const p of points2D){
+      while (lower.length >=2 && cross(lower[lower.length-2], lower[lower.length-1], p) <= 0) lower.pop();
+      lower.push(p);
+    }
+    const upper = [];
+    for (let i=points2D.length-1;i>=0;i--){
+      const p = points2D[i];
+      while (upper.length >=2 && cross(upper[upper.length-2], upper[upper.length-1], p) <= 0) upper.pop();
+      upper.push(p);
+    }
+    upper.pop(); lower.pop();
+    return lower.concat(upper);
+  }
+
+  // Helper: convert plane inliers to polygon in world coords
+  function planeInliersToPolygon(points, plane){
+    // plane.normal [nx,ny,nz], plane.d
+    // choose axis: construct orthonormal basis u,v on plane
+    const [nx,ny,nz] = plane.normal;
+    // pick arbitrary vector not parallel to normal
+    let ax = Math.abs(nx) > 0.9 ? [0,1,0] : [1,0,0];
+    // u = normalize(normal x ax), v = normal x u
+    const ux = ny*ax[2] - nz*ax[1];
+    const uy = nz*ax[0] - nx*ax[2];
+    const uz = nx*ax[1] - ny*ax[0];
+    const ulen = Math.hypot(ux,uy,uz);
+    if (ulen < 1e-6) return [];
+    const u = [ux/ulen, uy/ulen, uz/ulen];
+    const v = [ ny*u[2] - nz*u[1], nz*u[0] - nx*u[2], nx*u[1] - ny*u[0] ];
+    // compute centroid on plane from inliers
+    let cx=0,cy=0,cz=0;
+    for(const idx of plane.inliers){
+      cx += points[idx].x; cy += points[idx].y; cz += points[idx].z;
+    }
+    cx /= plane.inliers.length; cy /= plane.inliers.length; cz /= plane.inliers.length;
+    // project each inlier onto u/v coords
+    const pts2D = plane.inliers.map(i=>{
+      const p = points[i];
+      const rx = p.x - cx, ry = p.y - cy, rz = p.z - cz;
+      return {x: rx*u[0] + ry*u[1] + rz*u[2], y: rx*v[0] + ry*v[1] + rz*v[2], world: p};
+    });
+    const hull = convexHull2D(pts2D);
+    // convert hull back to world coords
+    const poly = hull.map(h => {
+      return {x: cx + h.x*u[0] + h.y*v[0], y: cy + h.x*u[1] + h.y*v[1], z: cz + h.x*u[2] + h.y*v[2]};
+    });
+    return poly;
+  }
+
+  // Remove furniture: cluster points (grid-based), remove small clusters above floor plane
+  function removeFurniture(points, floorPlane){
     if (!points.length) return points;
-    // compute histogram of y values
-    const ys = points.map(p=>p.y).sort((a,b)=>a-b);
-    const floorY = ys[Math.floor(points.length*0.05)] || ys[0]; // low percentile
-    // compute median height
-    const medianY = ys[Math.floor(points.length/2)];
-    // cluster with simple grid-based proximity
+    // simple grid hashing
+    const cell = 0.25;
+    const grid = new Map();
+    for (let i=0;i<points.length;i++){
+      const p = points[i];
+      const key = `${Math.round(p.x/cell)}_${Math.round(p.y/cell)}_${Math.round(p.z/cell)}`;
+      if (!grid.has(key)) grid.set(key, []);
+      grid.get(key).push(i);
+    }
+    // cluster labels by flood across neighboring cells
     const visited = new Array(points.length).fill(false);
     const clusters = [];
     for (let i=0;i<points.length;i++){
       if (visited[i]) continue;
-      const stack=[i]; const cluster=[];
-      visited[i]=true;
+      // flood fill by proximity
+      const stack=[i]; visited[i]=true; const cluster=[];
       while(stack.length){
-        const idx = stack.pop();
-        cluster.push(points[idx]);
+        const idx = stack.pop(); cluster.push(idx);
+        const p = points[idx];
         for (let j=0;j<points.length;j++){
           if (visited[j]) continue;
-          if (euclid(points[idx],points[j]) < 0.35){ visited[j]=true; stack.push(j); }
+          if (Math.hypot(points[j].x-p.x, points[j].y-p.y, points[j].z-p.z) < 0.35){
+            visited[j]=true; stack.push(j);
+          }
         }
       }
       clusters.push(cluster);
     }
-    // decide which clusters look like furniture:
-    // - cluster centroid height between floorY+0.15 and 1.4m AND cluster size small (furniture footprint small)
-    const keep = [];
-    for(const c of clusters){
-      const centroid = c.reduce((acc,p)=>({x:acc.x+p.x,y:acc.y+p.y,z:acc.z+p.z}),{x:0,y:0,z:0});
-      centroid.x/=c.length; centroid.y/=c.length; centroid.z/=c.length;
-      const footprint = Math.max(0.01, c.length * 0.02); // rough
-      const heightAboveFloor = centroid.y - floorY;
-      const isFurniture = (heightAboveFloor > 0.15 && heightAboveFloor < 1.6 && c.length < 12);
-      // also treat very low dense clusters near floor as not furniture (e.g., floor detection)
-      if (!isFurniture){
-        keep.push(...c);
-      } else {
-        // skip cluster (treat as furniture) — do not include in final points
+    // decide keepers: clusters that are large OR cluster centroid near floor plane
+    const keepIdx = new Set();
+    for (const c of clusters){
+      let cx=0,cy=0,cz=0;
+      for (const idx of c){ cx+=points[idx].x; cy+=points[idx].y; cz+=points[idx].z; }
+      cx /= c.length; cy /= c.length; cz /= c.length;
+      // distance to floor plane
+      let floorDist = Infinity;
+      if (floorPlane){
+        const [nx,ny,nz] = floorPlane.normal;
+        floorDist = Math.abs(nx*cx + ny*cy + nz*cz + floorPlane.d);
+      }
+      // decide
+      const isSmall = c.length < 20;
+      const isHigh = floorDist > 0.08 && cy -  (floorPlane ? (- (floorPlane.d + floorPlane.normal[0]*0 + floorPlane.normal[1]*0 + floorPlane.normal[2]*0) ) : 0) > 0.2;
+      // keep cluster if not (small && high)
+      if (!(isSmall && isHigh)){
+        for(const idx of c) keepIdx.add(idx);
       }
     }
-    return keep;
+    const out = [];
+    for (let i=0;i<points.length;i++) if (keepIdx.has(i)) out.push(points[i]);
+    return out;
   }
 
-  // Generate simplified boundary vertices: find min/max X,Z of floor points
-  function buildBoundaries(points){
-    const floorPoints = points.filter(p=>p.type==='floor' || p.y <= (Math.min(...points.map(q=>q.y))+0.25));
-    if (!floorPoints.length) return null;
-    const xs = floorPoints.map(p=>p.x);
-    const zs = floorPoints.map(p=>p.z);
-    const minX = Math.min(...xs), maxX = Math.max(...xs);
-    const minZ = Math.min(...zs), maxZ = Math.max(...zs);
-    // find estimated ceiling by high points
-    const ceilingCandidates = points.filter(p=>p.y > 2.0);
-    // default height fallback
-    const height = ceilingCandidates.length ? Math.round((ceilingCandidates.reduce((s,p)=>s+p.y,0)/ceilingCandidates.length - Math.min(...floorPoints.map(p=>p.y)))*100)/100 : 2.7;
-    const floorY = Math.min(...floorPoints.map(p=>p.y));
-    // rectangular approx
-    const vertices = [
-      [minX, floorY, minZ],
-      [maxX, floorY, minZ],
-      [maxX, floorY, maxZ],
-      [minX, floorY, maxZ]
-    ];
-    return {vertices, width:Math.abs(maxX-minX), depth:Math.abs(maxZ-minZ), height};
+  // Convert XRDepthInformation to point cloud for a given view pose
+  function depthToPointCloud(depthInfo, viewPose, subsample=6){
+    // depthInfo: XRCPUDepthInformation or similar. Implement tolerantly: check for .data, .rawValueToMeters, or .getFloat32/Uint16
+    const pts = [];
+    try {
+      const width = depthInfo.width;
+      const height = depthInfo.height;
+
+      // The API differs; attempt to read depth data
+      // If depthInfo.data exists and is TypedArray
+      let depthArray = null;
+      if (depthInfo.data) depthArray = depthInfo.data;
+      else if (depthInfo.buffer) depthArray = new Uint16Array(depthInfo.buffer);
+      else if (depthInfo instanceof ImageBitmap) {
+        // unlikely; skip
+        return pts;
+      } else if (depthInfo.getDepth) {
+        // unofficial helper
+        depthArray = depthInfo.getDepth();
+      }
+
+      // Check for conversion function
+      const rawToMeters = depthInfo.rawValueToMeters || depthInfo.rawValueToMetersFunction || (v => v); // fallback identity
+
+      // projection params: use the view projection matrix to unproject
+      // viewPose has transform.inverse? Instead use view projection matrix from XRView. We'll use THREE's camera matrix trick by constructing projection & view matrices.
+      // But WebXR's view also includes projectionMatrix and transform.matrix in column-major float32Array.
+      const proj = viewPose.projectionMatrix; // Float32Array(16)
+      const viewMat = viewPose.transform.inverse ? viewPose.transform.inverse.matrix : null;
+      // We'll use depth -> NDC -> camera space approach:
+      // For pixel (i,j) depthRaw -> meters. NDC x = (i/width)*2 -1 ; y = (j/height)*2 -1 (note Y flipping sometimes)
+      // Then unproject using inverse(proj) to get view-space direction.
+      // We need inverse projection matrix:
+      const projMat = new THREE.Matrix4().fromArray(proj);
+      const invProj = new THREE.Matrix4().copy(projMat).invert();
+      // For view-to-world, use viewPose.transform.matrix (4x4)
+      const viewToWorld = new THREE.Matrix4().fromArray(viewPose.transform.matrix);
+
+      // DepthArray could be float32, uint16 etc. We'll interpret generically.
+      // iterate subsampled
+      const stepX = Math.max(1, Math.floor(width/subsample));
+      const stepY = Math.max(1, Math.floor(height/subsample));
+      for (let y=0;y<height;y+=stepY){
+        for (let x=0;x<width;x+=stepX){
+          const idx = y*width + x;
+          let raw = depthArray ? depthArray[idx] : undefined;
+          if (raw === undefined) continue;
+          const meters = (typeof raw === 'number' ? raw : raw[0]) * (rawToMeters ? rawToMeters : 1);
+          if (!isFinite(meters) || meters <= 0) continue;
+          // NDC
+          const ndcX = (x / (width-1)) * 2 - 1;
+          const ndcY = -((y / (height-1)) * 2 - 1); // flip Y to NDC top-left -> bottom-left
+          // point in clip space
+          const clip = new THREE.Vector4(ndcX, ndcY, -1, 1);
+          // convert to view-space direction
+          clip.applyMatrix4(invProj);
+          // perspective divide
+          if (clip.w === 0) continue;
+          clip.divideScalar(clip.w);
+          // this gives a ray direction in view-space. Normalize and scale to distance meters
+          const dir = new THREE.Vector3(clip.x, clip.y, clip.z).normalize();
+          // convert view-space point at distance meters
+          const localPoint = new THREE.Vector4(dir.x*meters, dir.y*meters, dir.z*meters, 1.0);
+          // transform to world space
+          localPoint.applyMatrix4(viewToWorld);
+          pts.push({x: localPoint.x, y: localPoint.y, z: localPoint.z});
+        }
+      }
+    } catch(e){
+      console.warn('depthToPointCloud failed', e);
+    }
+    return pts;
   }
 
-  // JSON generator
-  function generateJSON(boundary, points){
-    const timestamp = new Date().toISOString();
-    const meta = {
-      version: '1.0',
-      generatedAt: timestamp,
-      source: 'webxr-hit-test-heuristic-demo',
-      unit:'meters'
-    };
-    const dimensions = boundary ? {
-      width: parseFloat(boundary.width.toFixed(2)),
-      depth: parseFloat(boundary.depth.toFixed(2)),
-      height: parseFloat(boundary.height.toFixed(2)),
-      area: parseFloat((boundary.width*boundary.depth).toFixed(2)),
-      volume: parseFloat((boundary.width*boundary.depth*boundary.height).toFixed(2))
-    } : {width:0,depth:0,height:0,area:0,volume:0};
-    const result = {
-      metadata: meta,
-      boundaries: boundary ? { floor: { vertices: boundary.vertices }, walls: 'approximated' } : {},
-      dimensions,
-      samplesCount: points.length,
-      furnitureRemoved: true,
-      processing: { method: 'hit-test-sampling + clustering heuristic', confidence: Math.min(0.95, Math.round(Math.min(1, points.length/80) * 100)/100) }
-    };
-    return result;
-  }
+  // XR Frame loop when depth is enabled
+  function onXRFrameDepth(time, frame){
+    if (!xrSession) return;
+    const pose = frame.getViewerPose(refSpace);
+    if (!pose) return;
+    // sample first view
+    const view = pose.views[0];
+    // get depth info (API name may vary)
+    let depthInfo = null;
+    try {
+      // Preferred modern API: frame.getDepthInformation(view)
+      if (frame.getDepthInformation) depthInfo = frame.getDepthInformation(view);
+      // Some implementations might attach depth to view: view.depthInformation
+      if (!depthInfo && view && view.depthInformation) depthInfo = view.depthInformation;
+      // Or to frame: frame.depth
+      if (!depthInfo && frame.depth) depthInfo = frame.depth;
+    } catch(e){
+      depthInfo = null;
+    }
+    if (depthInfo){
+      usingDepth = true;
+      // limit sampling rate for performance
+      const now = performance.now();
+      if (now - lastDepthSampleTime > 400){ // sample ~2-3 fps
+        lastDepthSampleTime = now;
+        const pts = depthToPointCloud(depthInfo, view, 160); // larger subsample param reduces points (tune)
+        for(const p of pts){
+          samples.push(p);
+          // Optionally add marker (but don't add thousands)
+          if (samples.length % 50 === 0) addPointMarker(p,0x66bb6a,0.02);
+        }
+        sampleCountEl.textContent = samples.length;
+      }
+    } else {
+      // no depth: optionally do hit-test sampling if hitTestSource available
+      // we'll keep hit-test sampling separated
+    }
 
-  // Visualization helpers: remove markers & draw bounding box
-  function clearViz(){
-    while(vizGroup.children.length) vizGroup.remove(vizGroup.children[0]);
-  }
-  function drawBoundary(boundary){
-    if (!boundary) return;
-    const v = boundary.vertices;
-    const geom = new THREE.BufferGeometry().setFromPoints(v.map(p=>new THREE.Vector3(p[0], p[1]+0.01, p[2])));
-    // close loop
-    const positions = new Float32Array([...geom.attributes.position.array, geom.attributes.position.array[0], geom.attributes.position.array[1], geom.attributes.position.array[2]]);
-    const linegeom = new THREE.BufferGeometry();
-    linegeom.setAttribute('position', new THREE.BufferAttribute(positions,3));
-    const mat = new THREE.LineBasicMaterial({color:0x4caf50, linewidth:2});
-    const line = new THREE.Line(linegeom, mat);
-    vizGroup.add(line);
-  }
-
-  // Render loop (when active)
-  function render(){
     renderer.render(scene, camera);
   }
 
-  // XR loop: sample hit-test continuously (auto mode) or on tap (manual)
-  async function onXRFrame(time, frame){
+  // XR Frame loop for hit-test fallback
+  function onXRFrameHit(time, frame){
     if (!xrSession) return;
-    const session = xrSession;
     const pose = frame.getViewerPose(refSpace);
-    // update camera matrix for three.js renderer
-    if (pose){
-      const view = pose.views[0];
-      const viewport = renderer.xr.getViewport(view);
-      renderer.setSize(viewport.width, viewport.height);
-      // Three.js will handle camera when rendering with XR session
-    }
-
-    // sample hit test if available
+    if (!pose) return;
+    // hit test
     if (hitTestSource){
       const hitResults = frame.getHitTestResults(hitTestSource);
       if (hitResults.length){
-        // pick a result
         const hit = hitResults[0];
-        const hitPose = hit.getPose(refSpace);
-        if (hitPose){
-          const pos = { x: hitPose.transform.position.x, y: hitPose.transform.position.y, z: hitPose.transform.position.z };
-          // keep sampling frequency controlled: avoid flooding
-          samples.push(pos);
-          // add a small visual marker
-          addMarker(pos, 0x66bb6a, 0.02);
-          countSurfaces.textContent = samples.length;
+        const hp = hit.getPose(refSpace);
+        if (hp){
+          samples.push({x:hp.transform.position.x, y:hp.transform.position.y, z:hp.transform.position.z});
+          if (samples.length % 8 === 0) addPointMarker(samples[samples.length-1], 0x66bb6a, 0.02);
+          sampleCountEl.textContent = samples.length;
         }
       }
     }
-    render();
+    renderer.render(scene, camera);
   }
 
-  // Start XR session
-  async function startAR(){
+  // start XR session with depth-sensing request
+  async function startXR(){
     if (!navigator.xr) { alert('WebXR not available'); return; }
+    // prefer depth-sensing usage preferences; different browsers accept different shapes — be permissive
+    const depthOptions = {
+      usagePreference: ['cpu-optimized','gpu-optimized'],
+      dataFormatPreference: ['luminance-alpha','float32','float32-external'] // tolerant
+    };
+    const sessionInit = {
+      optionalFeatures: ['dom-overlay','hit-test','anchors','depth-sensing'],
+      requiredFeatures: ['local'],
+      domOverlay: { root: document.body }
+    };
+    // Some implementations accept depth-sensing nested object in requestSession
     try {
-      showStatus('Requesting AR session...');
-      xrSession = await navigator.xr.requestSession('immersive-ar', {
-        requiredFeatures: ['hit-test', 'local'],
-        optionalFeatures: ['dom-overlay','anchors'],
-        domOverlay: {root: document.body}
-      });
-    } catch (err){
-      console.error(err);
-      alert('Failed to start AR session: ' + (err && err.message ? err.message : err));
-      showStatus('AR session failed', true);
-      return;
+      xrSession = await navigator.xr.requestSession('immersive-ar', Object.assign({}, sessionInit, {depthSensing: depthOptions}));
+    } catch (e){
+      console.warn('requestSession with depthSensing failed, trying without depth param', e);
+      try {
+        xrSession = await navigator.xr.requestSession('immersive-ar', sessionInit);
+      } catch (err){
+        alert('Failed to start AR session: ' + (err && err.message ? err.message : err));
+        showStatus('AR start failed', true);
+        return;
+      }
     }
 
-    // set renderer XR session
+    // set renderer session
     renderer.xr.setSession(xrSession);
-
-    // get reference space and hit-test source
     refSpace = await xrSession.requestReferenceSpace('local');
-    viewerSpace = await xrSession.requestReferenceSpace('viewer');
+
+    // try hit-test source (fallback)
     try {
+      const viewerSpace = await xrSession.requestReferenceSpace('viewer');
       hitTestSource = await xrSession.requestHitTestSource({space: viewerSpace});
     } catch(e){
-      console.warn('Hit test not available:', e);
       hitTestSource = null;
+      console.warn('hit test not available', e);
     }
 
-    // show controls & update UI
-    controls.style.display = 'block';
-    startARBtn.style.display = 'none';
-    stopARBtn.style.display = 'inline-block';
-    showStatus('AR session started — move device slowly to sample surfaces');
+    // detect if depth-sensing is actually available by attempting to get depth info on the next frame
+    depthSupported = false;
+    usingDepth = false;
 
-    // set animation loop
+    // set animation loop and a pre-frame probe for depth availability
     renderer.setAnimationLoop((t,frame) => {
-      if (frame) onXRFrame(t, frame);
-      else render();
+      const pose = frame.getViewerPose(refSpace);
+      if (!pose) {
+        renderer.render(scene, camera);
+        return;
+      }
+      // probe for depth once
+      if (!depthSupported){
+        try {
+          const view = pose.views[0];
+          let depthInfo = null;
+          if (frame.getDepthInformation) depthInfo = frame.getDepthInformation(view);
+          if (!depthInfo && view && view.depthInformation) depthInfo = view.depthInformation;
+          if (depthInfo){
+            console.log('Depth information available');
+            depthSupported = true;
+          } else {
+            // depth not available (yet)
+            depthSupported = false;
+          }
+        } catch(e){
+          depthSupported = false;
+        }
+      }
+      // pick loop
+      if (depthSupported && modeSelect.value === 'auto'){
+        onXRFrameDepth(t, frame);
+      } else {
+        onXRFrameHit(t, frame);
+      }
     });
 
     xrSession.addEventListener('end', ()=>{
-      hitTestSource = null;
-      xrSession = null;
       renderer.setAnimationLoop(null);
-      showStatus('AR ended', true);
-      startARBtn.style.display = 'inline-block';
-      stopARBtn.style.display = 'none';
+      xrSession = null;
+      showStatus('AR session ended', true);
+      startBtn.style.display = 'inline-block';
+      stopBtn.style.display = 'none';
     });
 
-    // attach manual tap listener for manual mode
-    renderer.domElement.onclick = (ev) => {
-      if (!xrSession) return;
-      if (modeSelect.value !== 'manual') return; // only manual when selected
-      // Convert screen coords to normalized device coords for a transient input hit test
-      const rect = renderer.domElement.getBoundingClientRect();
-      const x = ( (ev.clientX - rect.left) / rect.width ) * 2 - 1;
-      const y = - ( (ev.clientY - rect.top) / rect.height ) * 2 + 1;
-      // perform transient hit test via XR input source is not universally available, fallback to using existing hitTestSource and treat viewer ray:
-      // We'll perform an XRRay from the camera direction (approx) and test
-      if (frameOfLast) {
-        // nothing here — for demo, manual tapping will simply snapshot nearest sampled point
-      }
-      showStatus('Manual tap sampled (approx). For precise manual sampling, use a device with transient input support.');
-    };
+    controls.style.display = 'block';
+    startBtn.style.display = 'none';
+    stopBtn.style.display = 'inline-block';
+    showStatus('AR session started — scanning...');
   }
 
-  // stop AR
-  async function stopAR(){
+  async function stopXR(){
     if (xrSession) await xrSession.end();
     renderer.setAnimationLoop(null);
-    showStatus('AR ended', false);
+    xrSession = null;
+    showStatus('AR stopped', false);
   }
 
-  // Processing: clean samples, remove furniture, build boundary and show JSON
-  function processSamples(){
+  // Process collected samples into planes + JSON
+  function processAndExport(){
     if (!samples.length){
-      alert('No samples collected — move around or switch to manual and tap surfaces.');
+      alert('No samples collected yet. Walk around and sweep the room.');
       return;
     }
-    showStatus('Processing samples...');
-    // classify floor/wall by height and orientation approximation:
-    const pts = samples.map(p => ({x:p.x,y:p.y,z:p.z}));
-    // estimate floor Y as lower percentile
-    const ys = pts.map(p=>p.y).sort((a,b)=>a-b);
-    const floorY = ys[Math.floor(ys.length*0.08)] || ys[0];
-    // mark approximate type
-    const classified = pts.map(p => {
-      const dy = p.y - floorY;
-      let type = 'wall';
-      if (dy < 0.22) type = 'floor';
-      else if (dy > 2.2) type = 'ceiling';
-      return {...p, type};
-    });
-    // remove furniture
-    const cleaned = removeFurnitureHeuristic(classified);
-    clearViz();
-    // draw sample markers for cleaned points
-    for(const p of cleaned){
-      const color = p.type==='floor'?0x66bb6a:(p.type==='ceiling'?0xffb74d:0x42a5f5);
-      addMarker(p, color, 0.02);
+    showStatus('Processing samples (this may take a few seconds)...');
+    // copy points
+    let pts = samples.map(p=>({x:p.x,y:p.y,z:p.z}));
+    // downsample for heavy operations
+    if (pts.length > 8000){
+      const step = Math.ceil(pts.length / 6000);
+      pts = pts.filter((_,i)=> i%step === 0);
     }
-    // build boundary
-    const boundary = buildBoundaries(cleaned);
-    drawBoundary(boundary);
-    // generate JSON
-    const resultJSON = generateJSON(boundary, cleaned);
-    jsonOutput.textContent = JSON.stringify(resultJSON, null, 2);
-    resultsPanel.style.display = 'block';
-    showStatus('Processing complete — check JSON panel', true);
+
+    // First, detect dominant plane (try to detect floor: horizontal plane with largest area near lowest y)
+    const planes = [];
+    let leftovers = pts.slice();
+    for (let i=0;i<3;i++){ // try to find up to 3 major planes
+      const plane = ransacPlane(leftovers, 800, 0.04, 0.02);
+      if (!plane) break;
+      planes.push(plane);
+      // remove inliers from leftovers
+      const newLeft = [];
+      const inlierSet = new Set(plane.inliers);
+      for (let j=0;j<leftovers.length;j++){
+        if (!inlierSet.has(j)) newLeft.push(leftovers[j]);
+      }
+      leftovers = newLeft;
+    }
+
+    // Classify which plane is floor: choose plane whose normal is most aligned with +Y (vertical axis) and has low centroid Y
+    function planeCentroid(points, inliers){
+      let cx=0,cy=0,cz=0;
+      for (const i of inliers){ cx+=points[i].x; cy+=points[i].y; cz+=points[i].z; }
+      return {x:cx/inliers.length, y:cy/inliers.length, z:cz/inliers.length};
+    }
+
+    let floorPlane = null;
+    const candidatePlanes = [];
+    for (const pl of planes){
+      const centroid = planeCentroid(pts, pl.inliers);
+      const nx = pl.normal[0], ny = pl.normal[1], nz = pl.normal[2];
+      const verticalScore = Math.abs(ny); // 1 if perfectly horizontal
+      candidatePlanes.push({pl, centroid, verticalScore, areaEstimate: pl.inliers.length});
+    }
+    if (candidatePlanes.length){
+      // prefer high verticalScore and low centroid y
+      candidatePlanes.sort((a,b) => (b.verticalScore - a.verticalScore) || (a.centroid.y - b.centroid.y));
+      floorPlane = candidatePlanes[0].pl;
+    }
+
+    // Remove furniture clusters using floorPlane
+    const cleaned = removeFurniture(pts, floorPlane);
+
+    // Recompute planes on cleaned set for walls
+    const wallPlanes = [];
+    let leftover2 = cleaned.slice();
+    for (let i=0;i<4;i++){
+      const p = ransacPlane(leftover2, 800, 0.04, 0.02);
+      if (!p) break;
+      // discard horizontal plane (floor) by checking normal
+      if (Math.abs(Math.abs(p.normal[1]) - 1) < 0.2){
+        // horizontal -> probably floor/ceiling, skip here
+        // remove its inliers anyway
+        const inS = new Set(p.inliers);
+        leftover2 = leftover2.filter((_,idx)=>!inS.has(idx));
+        continue;
+      }
+      // store wall plane
+      wallPlanes.push(p);
+      // remove inliers
+      const inS = new Set(p.inliers);
+      leftover2 = leftover2.filter((_,idx)=>!inS.has(idx));
+    }
+
+    // Build polygons for wall planes
+    const walls = [];
+    for (const wp of wallPlanes){
+      const poly = planeInliersToPolygon(cleaned, wp);
+      if (poly && poly.length >= 3){
+        // compute normal (ensure outward direction)
+        walls.push({normal: wp.normal, polygon: poly});
+      }
+    }
+
+    // Build floor polygon from floorPlane inliers
+    let floorPolygon = null;
+    if (floorPlane){
+      const floorPoly = planeInliersToPolygon(pts, floorPlane);
+      if (floorPoly && floorPoly.length >= 3) floorPolygon = floorPoly;
+    } else {
+      // fallback: compute convex hull of cleaned points projected to XZ
+      const pts2D = cleaned.map(p=>({x:p.x,y:p.z}));
+      const hull2D = convexHull2D(pts2D);
+      // convert to 3D polygon at minY
+      if (hull2D.length >= 3){
+        const minY = Math.min(...cleaned.map(p=>p.y));
+        floorPolygon = hull2D.map(h => ({x:h.x,y:minY,z:h.y}));
+      }
+    }
+
+    // Compute room dimensions: bounding box of floor polygon
+    let width=0, depth=0, heightEst=2.7;
+    if (floorPolygon){
+      const xs = floorPolygon.map(p=>p.x);
+      const zs = floorPolygon.map(p=>p.z);
+      width = Math.abs(Math.max(...xs) - Math.min(...xs));
+      depth = Math.abs(Math.max(...zs) - Math.min(...zs));
+      // estimate height using highest cleaned point above floor
+      const floorY = Math.min(...floorPolygon.map(p=>p.y));
+      const highY = Math.max(...cleaned.map(p=>p.y));
+      heightEst = Math.round((highY - floorY)*100)/100;
+      if (!isFinite(heightEst) || heightEst <= 1.6) heightEst = 2.7;
+    }
+
+    // Prepare JSON
+    const generatedAt = new Date().toISOString();
+    const metadata = {version:'1.0', generatedAt, source:'webxr-depth-room-scanner', unit:'meters', deviceHint:'Galaxy S21-like (depth capable)'};
+    const json = {
+      metadata,
+      dimensions: { width: parseFloat(width.toFixed(2)), depth: parseFloat(depth.toFixed(2)), height: parseFloat(heightEst.toFixed(2)), area: parseFloat((width*depth).toFixed(2)), volume: parseFloat((width*depth*heightEst).toFixed(2)) },
+      floor: floorPolygon ? { vertices: floorPolygon } : null,
+      walls: walls.map((w,idx) => ({ id:`wall_${idx+1}`, normal: w.normal, polygon: w.polygon })),
+      samples: cleaned.length,
+      rawPointsCount: pts.length,
+      notes: 'Planes detected via RANSAC. Furniture heuristically removed by clustering above floor plane. This is an approximation.'
+    };
+
+    // visualize outputs: clear & draw floor polygon + wall lines
+    clearViz();
+    if (floorPolygon){
+      // draw small points on polygon
+      for (const v of floorPolygon.slice(0,200)){
+        addPointMarker(v, 0x44ff88, 0.015);
+      }
+    }
+    // wall visualization
+    for (const w of walls){
+      for (const v of (w.polygon||[]).slice(0,200)) addPointMarker(v, 0x66ccff, 0.018);
+    }
+
+    // show JSON
+    jsonOutput.textContent = JSON.stringify(json, null, 2);
+    results.style.display = 'block';
+    pointsCountEl.textContent = cleaned.length;
+    showStatus('Processing complete — review JSON', true);
   }
 
   // UI wiring
-  document.getElementById('dismiss').addEventListener('click', ()=>{
+  okBtn.addEventListener('click', ()=>{
     document.getElementById('instructions').style.display='none';
     controls.style.display = 'block';
   });
-
-  startARBtn.addEventListener('click', async ()=> {
-    await startAR();
+  startBtn.addEventListener('click', async ()=> {
+    await startXR();
   });
-
-  stopARBtn.addEventListener('click', async ()=> {
-    await stopAR();
+  stopBtn.addEventListener('click', async ()=> {
+    await stopXR();
   });
-
-  processBtn.addEventListener('click', ()=> processSamples());
   resetBtn.addEventListener('click', ()=>{
     samples = [];
     clearViz();
     jsonOutput.textContent = 'No result yet.';
-    resultsPanel.style.display = 'none';
-    countSurfaces.textContent = samples.length;
-    showStatus('Scan reset — ready', true);
+    results.style.display = 'none';
+    sampleCountEl.textContent = samples.length;
+    pointsCountEl.textContent = 0;
+    showStatus('Reset — ready', true);
   });
 
+  processBtn.addEventListener('click', ()=> processAndExport());
+
+  closeRes.addEventListener('click', ()=> results.style.display = 'none');
+
   copyBtn.addEventListener('click', async ()=>{
-    const txt = jsonOutput.textContent;
     try {
-      await navigator.clipboard.writeText(txt);
+      await navigator.clipboard.writeText(jsonOutput.textContent);
       showStatus('JSON copied to clipboard', true);
-    } catch(e){
-      alert('Copy failed: ' + e);
-    }
+    } catch(e){ alert('Copy failed: ' + e); }
   });
 
   downloadBtn.addEventListener('click', ()=>{
@@ -459,16 +736,20 @@
     const blob = new Blob([txt], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'empty_room.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    a.href = url; a.download = 'empty_room_depth.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
     showStatus('JSON downloaded', true);
   });
 
-  closeResults.addEventListener('click', ()=>{ resultsPanel.style.display = 'none'; });
+  // expose manual tap sampling: when user taps screen in manual mode, create a hit-test sample
+  renderer.domElement.addEventListener('click', (ev)=>{
+    if (!xrSession) return;
+    if (modeSelect.value !== 'manual') return;
+    // fire a one-off transient hit-test if frame available is not accessible here; as fallback, use existing hitTestSource result stored by frame loop
+    // user can also tap to note positions but for robust manual sampling you need devices that implement transient input.
+    showStatus('Manual sampling is approximated in this demo. Prefer auto depth mode for best results.', true);
+  });
 
-  // show count update regularly
-  setInterval(()=>{ countSurfaces.textContent = samples.length; }, 800);
-
-  // initial UI visibility
+  // initial UI
   controls.style.display = 'none';
   showStatus('Ready — dismiss the instructions to show controls', true);
 })();
